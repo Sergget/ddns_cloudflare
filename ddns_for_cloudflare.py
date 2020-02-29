@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # This is a simple python script intended to update the DNS record on Cloudflare
-# Currently,this script does 1 check on all dns records of 1 zone whose info listed as bellow, which should be enough for personal use
+# Currently,this script does 1 check on all dns records of 1 zone, which should be enough for personal use
 # This script does not run continuously, please run this script using crontab or other sceheduler utility and create proper log files
 # Before use, please modify the information below to ensure you get correct autherication
 
@@ -10,14 +10,23 @@ import requests
 import json
 
 base_url = "https://api.cloudflare.com/client/v4/"
+zone = "your_zone_id"
 
-email = "your-email@email.com"
-x_auth_key = "your_cloudflare_global_API_Key"
-zone = "Zone_ID_of_your_domain_name"
+# Cloudflare provide authentication by either old api key or new api token
+# only modify & uncomment the information you need below
+# if you choose token, only 'Authorization' is needed, this token is generated in profile page - api tokens - api tokens
+# if you choose key, then you need 'email' and 'x_auth_key' (global AUTH Key in your profile page - api tokens - api keys - global API keys)
+# email = "your.email@email.com"
+# x_auth_key = "your_global_API_key"
+Token = "your_api_token"
 
+# assemble headers
+# if you choose authentication by token, comment "X-Auth-Email" and # "X-Auth-Key", uncomment "Authorization"
+# if you choose authentication by key, comment "Authorization", uncomment X-Auth-Email" and # "X-Auth-Key"
 base_headers = {
-    "X-Auth-Email": email,
-    "X-Auth-Key": x_auth_key,
+    # "X-Auth-Email": email,
+    # "X-Auth-Key": x_auth_key,
+    "Authorization": "Bearer " + Token,
     "content-type": "application/json",
 }
 
@@ -55,7 +64,9 @@ def update_dns_record(ip):
                 updateRes = requests.put(
                     base_url + "zones/" + zone + "/dns_records/" + record_id,
                     headers=base_headers,
-                    data=json.dumps(payLoad),  # dumps payLoad before upload a json in body
+                    data=json.dumps(
+                        payLoad
+                    ),  # dumps payLoad before upload a json in body
                 ).json()
 
                 if updateRes["success"]:
@@ -65,9 +76,12 @@ def update_dns_record(ip):
                     )
                 else:
                     print("Record update failed! Errors:" + str(updateRes["errors"]))
-            # else:   # only for testing
+
+            # only for testing
+            # else:
             #     print("ip didn't change, record_ip maintains " + record_ip)
+    # print for failures
     else:
-        print("Listing records failed! Errors:" + r["errors"])
+        print("Listing records failed! Errors:" + str(r["errors"]))
 
 update_dns_record(check_ip())
