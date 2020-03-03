@@ -32,8 +32,9 @@ base_headers = {
 
 # obtain public IP address from https://api.ipify.org
 def check_ip():
-    lookup_ip = requests.get(url="https://api.ipify.org?format=json").json()["ip"]
-    return lookup_ip
+    res = requests.get("https://api.ipify.org")
+    if res.status_code==200:
+        return res.text
 
 def update_dns_record(ip):
     r = requests.get(
