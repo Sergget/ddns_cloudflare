@@ -4,32 +4,31 @@
 # This is a simple python script intended to update the DNS record on Cloudflare
 # Currently,this script does 1 check on all dns records of 1 zone, which should be enough for personal use
 # This script does not run continuously, please run this script using crontab or other sceheduler utility and create proper log files
-# Before use, please modify the information below to ensure you get correct autherication
+# Before use, please modify the information in file config.json to ensure you get correct autherication
 
 import requests
 import json
 from datetime import datetime
 
-base_url = "https://api.cloudflare.com/client/v4/"
-zone = "your_zone_id"
+with open ("./config.json") as f:
+    conf=json.loads(f.read())
 
-# Cloudflare provide authentication by either old api key or new api token
-# only modify & uncomment the information you need below
-# if you choose token, only 'Authorization' is needed, this token is generated in profile page - api tokens - api tokens
-# if you choose key, then you need 'email' and 'x_auth_key' (global AUTH Key in your profile page - api tokens - api keys - global API keys)
-# email = "your.email@email.com"
-# x_auth_key = "your_global_API_key"
-Token = "your_api_token"
+base_url=conf["base_url"]
+zone_id=conf["zone_id"]
+auth_mode=conf["auth_mode"]
 
-# assemble headers
-# if you choose authentication by token, comment "X-Auth-Email" and # "X-Auth-Key", uncomment "Authorization"
-# if you choose authentication by key, comment "Authorization", uncomment X-Auth-Email" and # "X-Auth-Key"
-base_headers = {
-    # "X-Auth-Email": email,
-    # "X-Auth-Key": x_auth_key,
-    "Authorization": "Bearer " + Token,
-    "content-type": "application/json",
-}
+def assHeader():
+    if auth_mode=="token_auth":
+        headers={
+            "Authorization": "Bearer " + conf[auth_mode]["api_token"],
+            "content-type": "application/json",
+        }
+    elif auth_mode=="key_auth":
+        headers={
+            "X-Auth-Email": conf[auth_mode]["email"],
+            "X-Auth-Key": conf[auth_mode]["x_auth_key"]
+        }
+    return headers
 
 def obCurrentTime():
     return "["+str(datetime.now())+"] "
@@ -45,10 +44,9 @@ def check_ip():
 
 def update_dns_record(ip):
     r = requests.get(
-        base_url + "zones/" + zone + "/dns_records", headers=base_headers
+        base_url + "zones/" + zone_id + "/dns_records", headers=assHeader()
     ).json()
-    # with open("./dns_records.json","w") as f:  # for testing purpose
-    #     f.write(r.text)
+
     if r["success"]:
         for record in r["result"]:
             record_id = record["id"]
@@ -68,10 +66,10 @@ def update_dns_record(ip):
                     "proxied": record["proxied"],
                 }
 
-                # try to update dns record for current item
+                # try to update dns record for current record
                 updateRes = requests.put(
-                    base_url + "zones/" + zone + "/dns_records/" + record_id,
-                    headers=base_headers,
+                    base_url + "zones/" + zone_id + "/dns_records/" + record_id,
+                    headers=assHeader(),
                     data=json.dumps(
                         payLoad
                     ),  # dumps payLoad before upload a json in body
@@ -85,8 +83,8 @@ def update_dns_record(ip):
                     print(obCurrentTime()+"Record update failed! Errors:" + str(updateRes["errors"]))
 
             # only for testing
-            # else:
-            #     print("ip didn't change, record_ip maintains " + record_ip)
+            else:
+                print(obCurrentTime()+"ip didn't change, record_ip maintains: " + record_ip)
     # print for failures
     else:
         print(obCurrentTime()+"Listing records failed! Errors:" + str(r["errors"]))
