@@ -1,0 +1,12 @@
+{
+    "base_url": "https://api.cloudflare.com/client/v4/",
+    "zone_id": "",
+    "auth_mode":"token_auth",
+    "token_auth": {
+        "api_token": ""
+    },
+    "key_auth": {
+        "email": "",
+        "x_auth_key": "" 
+    }
+}
