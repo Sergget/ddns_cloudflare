@@ -8,6 +8,7 @@
 
 import requests
 import json
+from datetime import datetime
 
 base_url = "https://api.cloudflare.com/client/v4/"
 zone = "your_zone_id"
@@ -30,11 +31,17 @@ base_headers = {
     "content-type": "application/json",
 }
 
+def obCurrentTime():
+    return "["+str(datetime.now())+"] "
+
 # obtain public IP address from https://api.ipify.org
 def check_ip():
-    res = requests.get("https://api.ipify.org")
-    if res.status_code==200:
-        return res.text
+    try:
+        res = requests.get("https://api.ipify.org")
+        if res.status_code==200:
+            return res.text
+    except Exception as e:
+        print(obCurrentTime()+"Error detected: "+str(e))    
 
 def update_dns_record(ip):
     r = requests.get(
@@ -72,17 +79,16 @@ def update_dns_record(ip):
 
                 if updateRes["success"]:
                     print(
-                        "Record update success! Update at: "
-                        + updateRes["result"]["modified_on"]
+                        "["+ updateRes["result"]["modified_on"]+"] Record update success!"
                     )
                 else:
-                    print("Record update failed! Errors:" + str(updateRes["errors"]))
+                    print(obCurrentTime()+"Record update failed! Errors:" + str(updateRes["errors"]))
 
             # only for testing
             # else:
             #     print("ip didn't change, record_ip maintains " + record_ip)
     # print for failures
     else:
-        print("Listing records failed! Errors:" + str(r["errors"]))
+        print(obCurrentTime()+"Listing records failed! Errors:" + str(r["errors"]))
 
 update_dns_record(check_ip())
