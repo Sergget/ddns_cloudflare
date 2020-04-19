@@ -31,6 +31,8 @@ def assHeader():
             "X-Auth-Email": conf[auth_mode]["email"],
             "X-Auth-Key": conf[auth_mode]["x_auth_key"]
         }
+    else:
+        raise ValueError("Invalid auth_mode")
     return headers
 
 def obCurrentTime():
@@ -42,8 +44,10 @@ def check_ip():
         res = requests.get("https://api.ipify.org")
         if res.status_code==200:
             return res.text
+        else:
+            raise ConnectionError("cannot obtain IP, response code:"+res.text)
     except Exception as e:
-        print(obCurrentTime()+"Error detected: "+str(e))    
+        print(obCurrentTime()+"Request error: "+str(e))    
 
 def update_dns_record(ip):
     r = requests.get(
@@ -83,13 +87,20 @@ def update_dns_record(ip):
                         "["+ updateRes["result"]["modified_on"]+"] Record update success!"
                     )
                 else:
-                    print(obCurrentTime()+"Record update failed! Errors:" + str(updateRes["errors"]))
+                   raise ConnectionError("Record update failed! Errors:" + str(updateRes["errors"]))
 
             # only for testing
             else:
                 print(obCurrentTime()+"ip didn't change, record_ip maintains: " + record_ip)
     # print for failures
     else:
-        print(obCurrentTime()+"Listing records failed! Errors:" + str(r["errors"]))
+        raise ConnectionError("Listing records failed! Errors:" + str(r["errors"]))
 
-update_dns_record(check_ip())
+try:
+    update_dns_record(check_ip())
+except ConnectionError as cError:
+    print(obCurrentTime()+str(cError))
+except ValueError as vError:
+    print(obCurrentTime()+str(vError))
+except Exception as e:
+    print(obCurrentTime()+"Error detected: "+str(e))
