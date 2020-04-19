@@ -17,7 +17,7 @@ try:
     with open ("./config.json") as f:
         conf=json.loads(f.read())
 except FileNotFoundError as e:
-    print(obCurrentTime()+" Config file not found: "+e)
+    print(obCurrentTime()+" Config file not found: "+str(e))
 
 base_url=conf["base_url"]
 zone_id=conf["zone_id"]
