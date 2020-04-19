@@ -10,6 +10,9 @@ import requests
 import json
 from datetime import datetime
 
+def obCurrentTime():
+    return "["+str(datetime.now())+"] "
+
 try:
     with open ("./config.json") as f:
         conf=json.loads(f.read())
@@ -34,9 +37,6 @@ def assHeader():
     else:
         raise ValueError("Invalid auth_mode")
     return headers
-
-def obCurrentTime():
-    return "["+str(datetime.now())+"] "
 
 # obtain public IP address from https://api.ipify.org
 def check_ip():
