@@ -8,22 +8,14 @@
 
 import requests
 import json
+import traceback
 from datetime import datetime
 
 def obCurrentTime():
     return "["+str(datetime.now())+"] "
 
-try:
-    with open ("./config.json") as f:
-        conf=json.loads(f.read())
-except FileNotFoundError as e:
-    print(obCurrentTime()+" Config file not found: "+str(e))
-
-base_url=conf["base_url"]
-zone_id=conf["zone_id"]
-auth_mode=conf["auth_mode"]
-
-def assHeader():
+def assHeader(conf):
+    auth_mode=conf["auth_mode"]
     if auth_mode=="token_auth":
         headers={
             "Authorization": "Bearer " + conf[auth_mode]["api_token"],
@@ -35,23 +27,23 @@ def assHeader():
             "X-Auth-Key": conf[auth_mode]["x_auth_key"]
         }
     else:
-        raise ValueError("Invalid auth_mode")
+        raise ValueError("Invalid auth_mode: "+conf[auth_mode])
     return headers
 
 # obtain public IP address from https://api.ipify.org
 def check_ip():
-    try:
-        res = requests.get("https://api.ipify.org")
-        if res.status_code==200:
-            return res.text
-        else:
-            raise ConnectionError("cannot obtain IP, response code:"+res.text)
-    except Exception as e:
-        print(obCurrentTime()+"Request error: "+str(e))    
+    res = requests.get("https://api.ipify.org")
+    if res.status_code==200:
+        return res.text
+    else:
+        raise ConnectionError("cannot obtain IP, response code:"+res.text)
 
-def update_dns_record(ip):
+def update_dns_record(ip,conf):
+    base_url=conf["base_url"]
+    zone_id=conf["zone_id"]
+
     r = requests.get(
-        base_url + "zones/" + zone_id + "/dns_records", headers=assHeader()
+        base_url + "zones/" + zone_id + "/dns_records", headers=assHeader(conf)
     ).json()
 
     if r["success"]:
@@ -76,7 +68,7 @@ def update_dns_record(ip):
                 # try to update dns record for current record
                 updateRes = requests.put(
                     base_url + "zones/" + zone_id + "/dns_records/" + record_id,
-                    headers=assHeader(),
+                    headers=assHeader(conf),
                     data=json.dumps(
                         payLoad
                     ),  # dumps payLoad before upload a json in body
@@ -90,17 +82,21 @@ def update_dns_record(ip):
                    raise ConnectionError("Record update failed! Errors:" + str(updateRes["errors"]))
 
             # only for testing
-            else:
-                print(obCurrentTime()+"ip didn't change, record_ip maintains: " + record_ip)
+            # else:
+            #     print(obCurrentTime()+"ip didn't change, record_ip maintains: " + record_ip)
     # print for failures
     else:
         raise ConnectionError("Listing records failed! Errors:" + str(r["errors"]))
 
 try:
-    update_dns_record(check_ip())
-except ConnectionError as cError:
-    print(obCurrentTime()+str(cError))
-except ValueError as vError:
-    print(obCurrentTime()+str(vError))
+    with open ("./config.json") as f:
+        conf=json.loads(f.read())
+        update_dns_record(check_ip(),conf)
+except FileNotFoundError:
+    print(obCurrentTime()+"Config file not found:\n"+traceback.format_exc())
+except ConnectionError:
+    print(obCurrentTime()+traceback.format_exc())
+except ValueError:
+    print(obCurrentTime()+traceback.format_exc())
 except Exception as e:
-    print(obCurrentTime()+"Error detected: "+str(e))
+    print(obCurrentTime()+"Error detected:\n"+traceback.format_exc())
